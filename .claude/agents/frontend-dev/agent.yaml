@@ -1,0 +1,20 @@
+name: frontend-dev
+description: |
+  前端开发专家，专注于 React + TypeScript + TailwindCSS + shadcn/ui。
+  擅长：UI 组件开发、状态管理、API 集成、响应式设计、引用面板交互、SSE 流式处理。
+
+model: default
+
+tools:
+  - ReadFile
+  - WriteFile
+  - StrReplaceFile
+  - Grep
+  - Glob
+  - Shell
+  - SearchWeb
+  - FetchURL
+
+skills:
+  - kimi-cli-help
+  - check-fix-project

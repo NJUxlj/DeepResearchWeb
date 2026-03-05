@@ -1,0 +1,19 @@
+name: devops
+description: |
+  DevOps 工程师，专注于 Docker、Docker Compose、CI/CD、环境配置。
+  擅长：容器化配置、服务编排、部署脚本、环境变量管理、多数据库 Docker 部署。
+
+model: default
+
+tools:
+  - ReadFile
+  - WriteFile
+  - StrReplaceFile
+  - Grep
+  - Glob
+  - Shell
+  - SearchWeb
+  - FetchURL
+
+skills:
+  - kimi-cli-help

@@ -1,0 +1,20 @@
+name: backend-dev
+description: |
+  后端开发专家，专注于 FastAPI、SQLAlchemy、异步编程、API 实现。
+  擅长：Python 后端代码开发、数据库模型实现、业务逻辑编写、API 端点实现、ARQ 异步任务。
+
+model: default
+
+tools:
+  - ReadFile
+  - WriteFile
+  - StrReplaceFile
+  - Grep
+  - Glob
+  - Shell
+  - SearchWeb
+  - FetchURL
+
+skills:
+  - kimi-cli-help
+  - check-fix-project
