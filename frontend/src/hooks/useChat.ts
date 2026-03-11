@@ -11,6 +11,7 @@ export function useChat() {
     isLoading,
     error,
     setCurrentSession,
+    updateCurrentSessionId,
     setMessages,
     addMessage,
     updateLastMessage,
@@ -89,6 +90,11 @@ export function useChat() {
             setError(errorMsg);
             setLoading(false);
           },
+          onSessionId: (sessionId) => {
+            console.log("[Chat] Received new session ID:", sessionId);
+            // 更新当前会话的 ID
+            updateCurrentSessionId(sessionId);
+          },
         });
       } catch (err) {
         console.error("[Chat] Send message error:", err);
@@ -105,6 +111,7 @@ export function useChat() {
       addMessage,
       updateLastMessage,
       updateLastMessageThinking,
+      updateCurrentSessionId,
     ]
   );
 

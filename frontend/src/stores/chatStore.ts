@@ -10,6 +10,7 @@ interface ChatState {
 
   // 方法
   setCurrentSession: (session: Session | null) => void;
+  updateCurrentSessionId: (sessionId: number) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateLastMessage: (content: string) => void;
@@ -26,6 +27,30 @@ export const useChatStore = create<ChatState>((set) => ({
   error: null,
 
   setCurrentSession: (session) => set({ currentSession: session }),
+
+  updateCurrentSessionId: (sessionId) =>
+    set((state) => {
+      if (state.currentSession) {
+        return {
+          currentSession: {
+            ...state.currentSession,
+            id: sessionId,
+          },
+        };
+      }
+      // 如果没有当前会话，创建一个基本的会话对象
+      return {
+        currentSession: {
+          id: sessionId,
+          user_id: 0,
+          title: "New Chat",
+          mode: "chat",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          message_count: 0,
+        },
+      };
+    }),
 
   setMessages: (messages) => set({ messages }),
 

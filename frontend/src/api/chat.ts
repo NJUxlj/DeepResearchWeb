@@ -8,6 +8,7 @@ export type StreamCallback = {
   onCitations?: (citations: Citation[]) => void;
   onDone?: (messageId: number) => void;
   onError?: (error: string) => void;
+  onSessionId?: (sessionId: number) => void;
 };
 
 /**
@@ -53,6 +54,15 @@ export function createChatStream(
         callbacks.onError?.(error.detail || "Request failed");
         cleanup();
         return;
+      }
+
+      // 读取 X-Session-Id header 并回调
+      const sessionIdHeader = response.headers.get("X-Session-Id");
+      if (sessionIdHeader) {
+        const sessionId = parseInt(sessionIdHeader, 10);
+        if (!isNaN(sessionId)) {
+          callbacks.onSessionId?.(sessionId);
+        }
       }
 
       if (!response.body) {
