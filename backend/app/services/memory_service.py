@@ -5,6 +5,9 @@ import hashlib
 import re
 
 from app.config import settings
+from app.utils.logger import get_logger
+
+logger = get_logger("memory_service")
 
 
 class EmbeddingService:
@@ -185,7 +188,7 @@ class MemoryService:
 
         # 检查是否启用 MemOS
         if not settings.USE_MEMOS:
-            print("USE_MEMOS is disabled, using fallback implementation")
+            logger.log("USE_MEMOS is disabled, using fallback implementation", mode="info")
             self._initialized = True
             return
 
@@ -309,13 +312,13 @@ class MemoryService:
             self._pref_memory = PreferenceTextMemory(pref_config)
             self._tree_memory = TreeTextMemory(tree_config)
 
-            print("MemOS initialized successfully")
+            logger.log("MemOS initialized successfully", mode="info")
 
         except ImportError as e:
             # MemOS SDK 未安装，使用模拟实现
-            print(f"Warning: MemOS SDK not found, using fallback implementation: {e}")
+            logger.log(f"Warning: MemOS SDK not found, using fallback implementation: {e}", mode="warning")
         except Exception as e:
-            print(f"Error initializing MemOS: {e}")
+            logger.log(f"Error initializing MemOS: {e}", mode="error")
 
         self._initialized = True
 
@@ -366,9 +369,10 @@ class MemoryService:
                 ]
 
             except Exception as e:
-                print(f"Error adding preference via MemOS: {e}")
+                logger.log(f"Error adding preference via MemOS: {e}", mode="error")
 
         # Fallback: 从对话中提取偏好
+        logger.log(f"Using fallback for add_preference: user_id={user_id}, session_id={session_id}", mode="info")
         memories = self._extract_preference_from_messages(
             messages=messages,
             user_id=user_id,
@@ -441,9 +445,10 @@ class MemoryService:
                     }
 
             except Exception as e:
-                print(f"Error adding tree memory via MemOS: {e}")
+                logger.log(f"Error adding tree memory via MemOS: {e}", mode="error")
 
         # Fallback 实现
+        logger.log(f"Using fallback for add_tree_memory: user_id={user_id}", mode="info")
         import uuid
         memory = {
             "id": str(uuid.uuid4()),
@@ -496,6 +501,7 @@ class MemoryService:
 
         if results and (self._pref_memory is None and self._tree_memory is None):
             # 使用 Fallback rerank
+            logger.log(f"Using fallback BM25 rerank for search: query={query}", mode="info")
             results = await self._rerank_service.rerank(
                 query=query,
                 candidates=results,
@@ -537,9 +543,10 @@ class MemoryService:
                     for r in results
                 ]
             except Exception as e:
-                print(f"Error searching preference via MemOS: {e}")
+                logger.log(f"Error searching preference via MemOS: {e}", mode="error")
 
         # Fallback
+        logger.log(f"Using fallback for _search_preference: user_id={user_id}", mode="info")
         key = f"pref_{user_id}" if user_id else "pref_default"
         memories = self._pref_memories.get(key, [])
 
@@ -595,9 +602,10 @@ class MemoryService:
                     for r in results
                 ]
             except Exception as e:
-                print(f"Error searching tree via MemOS: {e}")
+                logger.log(f"Error searching tree via MemOS: {e}", mode="error")
 
         # Fallback
+        logger.log(f"Using fallback for _search_tree: user_id={user_id}", mode="info")
         key = f"tree_{user_id}" if user_id else "tree_default"
         memories = self._tree_memories.get(key, [])
 
@@ -622,7 +630,7 @@ class MemoryService:
         session_id: int,
         chat_history: list[dict[str, str]],
         feedback_content: str,
-    ) -> dict[str, Any]:
+   ):
         """处理用户对记忆的反馈修正.
 
         注意:
@@ -648,6 +656,7 @@ class MemoryService:
         feedback_content: str,
     ) -> dict[str, Any]:
         """处理反馈（占位实现）."""
+        logger.log(f"Using fallback for process_feedback: user_id={user_id}, session_id={session_id}", mode="info")
         import uuid
 
         correction = {

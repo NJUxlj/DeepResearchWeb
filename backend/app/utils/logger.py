@@ -1,11 +1,28 @@
 """Logger utility for DeepResearchWeb."""
 
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-# 日志根目录（使用相对路径，基于项目根目录）
-LOG_ROOT_DIR = Path(__file__).parent.parent.parent.parent / "logs"
+# 确定日志根目录
+# 优先级: 环境变量 > Docker 容器 > 本地开发
+def _get_log_root_dir() -> Path:
+    # 1. 检查环境变量
+    if log_dir := os.environ.get("LOG_DIR"):
+        return Path(log_dir)
+
+    # 2. 检测是否在 Docker 容器中 (代码在 /app 目录下)
+    app_dir = Path("/app")
+    if app_dir.exists():
+        # Docker 环境，使用 /app/logs
+        return app_dir / "logs"
+
+    # 3. 本地开发环境，使用项目根目录的 logs
+    # 从 utils/logger.py 向上走 4 级到项目根目录
+    return Path(__file__).parent.parent.parent.parent / "logs"
+
+LOG_ROOT_DIR = _get_log_root_dir()
 
 # 确保日志目录存在
 LOG_ROOT_DIR.mkdir(parents=True, exist_ok=True)
