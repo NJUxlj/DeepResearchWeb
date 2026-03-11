@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.skill_config import SkillConfig
     from app.models.mcp_config import MCPServerConfig
     from app.models.user_env_config import UserEnvConfig
+    from app.models.user_notification_settings import UserNotificationSettings
 
 
 class User(Base):
@@ -59,6 +60,9 @@ class User(Base):
     )
     env_configs: Mapped[list["UserEnvConfig"]] = relationship(
         "UserEnvConfig", back_populates="user", cascade="all, delete-orphan"
+    )
+    notification_settings: Mapped["UserNotificationSettings"] = relationship(
+        "UserNotificationSettings", back_populates="user", cascade="all, delete-orphan", uselist=False
     )
 
     def __repr__(self) -> str:

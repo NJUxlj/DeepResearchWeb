@@ -39,6 +39,7 @@ export interface Message {
   session_id: number;
   role: "user" | "assistant" | "system";
   content: string;
+  thinking?: string;
   citations?: Citation[];
   meta_info?: Record<string, unknown>;
   created_at: string;
@@ -72,6 +73,6 @@ export interface ChatResponse {
 
 /** SSE 事件类型 */
 export interface ChatStreamEvent {
-  event: "message" | "chunk" | "citations" | "error" | "done";
+  event: "message" | "chunk" | "citations" | "error" | "done" | "thinking";
   data: Record<string, unknown>;
 }

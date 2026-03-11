@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import auth, chat, health, memory, messages, research, sessions, tools, skills, mcp, user_env_config
+from app.api.v1 import auth, chat, health, memory, messages, research, sessions, tools, skills, mcp, user_env_config, user_settings
 from app.config import settings
 from app.core.exceptions import setup_exception_handlers
 from app.core.logging import setup_logging
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(skills.router, prefix="/api/v1")
     app.include_router(mcp.router, prefix="/api/v1")
     app.include_router(user_env_config.router, prefix="/api/v1")
+    app.include_router(user_settings.router, prefix="/api/v1")
 
     return app
 

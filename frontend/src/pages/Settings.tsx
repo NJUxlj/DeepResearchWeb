@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon, User, Lock, Bell, Save, RotateCcw } from "lucide-react";
+import { Settings as SettingsIcon, User, Lock, Bell, Save, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUpdateUser } from "@/hooks/useAuth";
 import { userEnvConfigApi, UserEnvConfigInitResponse } from "@/api/userEnvConfig";
+import { userSettingsApi, NotificationSettings } from "@/api/userSettings";
 
 export default function Settings() {
   const { user } = useAuthStore();
@@ -10,21 +11,53 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications" | "env">("profile");
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [profileData, setProfileData] = useState({
     email: user?.email || "",
   });
 
-  // 环境变量配置状态
+  // ========== 环境变量配置状态 ==========
   const [envConfig, setEnvConfig] = useState<Record<string, string>>({});
   const [envLoading, setEnvLoading] = useState(false);
   const [envSaving, setEnvSaving] = useState(false);
   const [isNewConfig, setIsNewConfig] = useState(false);
 
+  // ========== 安全设置状态 ==========
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    old: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  // ========== 通知设置状态 ==========
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    email_enabled: true,
+    browser_enabled: false,
+    notify_new_message: true,
+    notify_research_complete: true,
+    notify_mention: true,
+  });
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationSaving, setNotificationSaving] = useState(false);
+
   // 加载环境配置
   useEffect(() => {
     if (activeTab === "env") {
       loadEnvConfig();
+    }
+  }, [activeTab]);
+
+  // 加载通知设置
+  useEffect(() => {
+    if (activeTab === "notifications") {
+      loadNotificationSettings();
     }
   }, [activeTab]);
 
@@ -41,24 +74,99 @@ export default function Settings() {
     }
   };
 
+  const loadNotificationSettings = async () => {
+    setNotificationLoading(true);
+    try {
+      const settings = await userSettingsApi.getNotificationSettings();
+      setNotificationSettings(settings);
+    } catch (error) {
+      console.error("Failed to load notification settings:", error);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), 3000);
+  };
+
+  // ========== 个人资料提交 ==========
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setSuccessMessage(null);
+    setErrorMessage(null);
 
     try {
       await updateUser({
         email: profileData.email,
       });
-      setSuccessMessage("Profile updated successfully");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showSuccess("个人资料更新成功");
     } catch (error) {
       console.error("Failed to update profile:", error);
+      showError("更新失败");
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ========== 修改密码 ==========
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showError("新密码与确认密码不匹配");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      showError("新密码长度至少为 8 个字符");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const response = await userSettingsApi.changePassword({
+        old_password: passwordData.oldPassword,
+        new_password: passwordData.newPassword,
+      });
+      if (response.success) {
+        showSuccess("密码修改成功");
+        setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      }
+    } catch (error: any) {
+      console.error("Failed to change password:", error);
+      showError(error?.response?.data?.detail || "密码修改失败");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  // ========== 通知设置变更 ==========
+  const handleNotificationChange = async (key: keyof NotificationSettings, value: boolean) => {
+    const newSettings = { ...notificationSettings, [key]: value };
+    setNotificationSettings(newSettings);
+
+    setNotificationSaving(true);
+    try {
+      await userSettingsApi.updateNotificationSettings({ [key]: value });
+    } catch (error) {
+      console.error("Failed to update notification settings:", error);
+      // 回滚
+      setNotificationSettings(notificationSettings);
+      showError("设置更新失败");
+    } finally {
+      setNotificationSaving(false);
+    }
+  };
+
+  // ========== 环境配置 ==========
   const handleEnvConfigChange = (key: string, value: string) => {
     setEnvConfig((prev) => ({
       ...prev,
@@ -75,12 +183,10 @@ export default function Settings() {
         await userEnvConfigApi.update("default", envConfig);
       }
       setIsNewConfig(false);
-      setSuccessMessage("环境配置保存成功");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showSuccess("环境配置保存成功");
     } catch (error) {
       console.error("Failed to save env config:", error);
-      setSuccessMessage("保存失败");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showError("保存失败");
     } finally {
       setEnvSaving(false);
     }
@@ -117,9 +223,9 @@ export default function Settings() {
           <h1 className="text-2xl font-bold">设置</h1>
         </div>
 
-        {successMessage && (
-          <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-lg">
-            {successMessage}
+        {(successMessage || errorMessage) && (
+          <div className={`mb-4 p-3 rounded-lg ${successMessage ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+            {successMessage || errorMessage}
           </div>
         )}
 
@@ -176,6 +282,7 @@ export default function Settings() {
 
           {/* Content */}
           <div className="flex-1">
+            {/* ========== 个人资料 ========== */}
             {activeTab === "profile" && (
               <div className="bg-card rounded-lg border p-6">
                 <h2 className="text-lg font-semibold mb-4">个人资料</h2>
@@ -213,20 +320,163 @@ export default function Settings() {
               </div>
             )}
 
+            {/* ========== 安全设置 ========== */}
             {activeTab === "security" && (
               <div className="bg-card rounded-lg border p-6">
-                <h2 className="text-lg font-semibold mb-4">安全设置</h2>
-                <p className="text-muted-foreground">安全设置功能开发中...</p>
+                <h2 className="text-lg font-semibold mb-4">修改密码</h2>
+
+                <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">当前密码</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.old ? "text" : "password"}
+                        value={passwordData.oldPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+                        placeholder="请输入当前密码"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPasswords.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">新密码</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.new ? "text" : "password"}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+                        placeholder="至少 8 位，包含大小写字母和数字"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">确认新密码</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? "text" : "password"}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+                        placeholder="请再次输入新密码"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passwordSaving || !passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {passwordSaving ? "保存中..." : "修改密码"}
+                  </button>
+                </form>
               </div>
             )}
 
+            {/* ========== 通知设置 ========== */}
             {activeTab === "notifications" && (
               <div className="bg-card rounded-lg border p-6">
                 <h2 className="text-lg font-semibold mb-4">通知设置</h2>
-                <p className="text-muted-foreground">通知设置功能开发中...</p>
+
+                {notificationLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">加载中...</div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* 通知渠道 */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-3">通知渠道</h3>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.email_enabled}
+                            onChange={(e) => handleNotificationChange("email_enabled", e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm">邮件通知</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.browser_enabled}
+                            onChange={(e) => handleNotificationChange("browser_enabled", e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm">浏览器推送通知</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 通知类型 */}
+                    <div>
+                      <h3 className="text-sm font-medium mb-3">通知类型</h3>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.notify_new_message}
+                            onChange={(e) => handleNotificationChange("notify_new_message", e.target.checked)}
+                            disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                          />
+                          <span className="text-sm">新消息通知</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.notify_research_complete}
+                            onChange={(e) => handleNotificationChange("notify_research_complete", e.target.checked)}
+                            disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                          />
+                          <span className="text-sm">研究任务完成通知</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.notify_mention}
+                            onChange={(e) => handleNotificationChange("notify_mention", e.target.checked)}
+                            disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                          />
+                          <span className="text-sm">被提及通知</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {notificationSaving && (
+                      <div className="text-sm text-muted-foreground">保存中...</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* ========== 环境变量设置 ========== */}
             {activeTab === "env" && (
               <div className="bg-card rounded-lg border p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -255,7 +505,6 @@ export default function Settings() {
                 ) : (
                   <div className="space-y-6 max-h-[calc(100vh-300px)] overflow-y-auto">
                     {Object.entries(envCategories).map(([category, keys]) => {
-                      // 过滤出实际存在的环境变量
                       const existingKeys = keys.filter((key) => key in envConfig);
                       if (existingKeys.length === 0) return null;
 

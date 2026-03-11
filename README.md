@@ -215,6 +215,8 @@ DeepResearchWeb/
 │   │   ├── services/    # 业务逻辑
 │   │   ├── agents/      # Agent 实现
 │   │   ├── workers/     # ARQ worker
+│   │   ├── utils/       # 工具函数
+│   │   │   └── logger.py # 日志工具
 │   │   └── db/          # 数据库连接
 │   └── requirements.txt
 ├── frontend/             # React 应用

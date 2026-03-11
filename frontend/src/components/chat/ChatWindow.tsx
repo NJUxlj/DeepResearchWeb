@@ -39,7 +39,10 @@ export default function ChatWindow({
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble
+                key={message.id}
+                message={message}
+              />
             ))
           )}
           {error && (

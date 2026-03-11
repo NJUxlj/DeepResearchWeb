@@ -28,6 +28,9 @@ class Message(Base):
     )  # "user" | "assistant" | "system"
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # 思维链内容（Chain of Thought）
+    thinking: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+
     # 引用信息（JSON 格式存储引用列表）
     citations: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True, default=None

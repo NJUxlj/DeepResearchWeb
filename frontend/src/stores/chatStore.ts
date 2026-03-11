@@ -13,6 +13,7 @@ interface ChatState {
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateLastMessage: (content: string) => void;
+  updateLastMessageThinking: (thinking: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearChat: () => void;
@@ -38,6 +39,18 @@ export const useChatStore = create<ChatState>((set) => ({
         const lastMsg = messages[messages.length - 1];
         if (lastMsg.role === "assistant") {
           messages[messages.length - 1] = { ...lastMsg, content };
+        }
+      }
+      return { messages };
+    }),
+
+  updateLastMessageThinking: (thinking) =>
+    set((state) => {
+      const messages = [...state.messages];
+      if (messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.role === "assistant") {
+          messages[messages.length - 1] = { ...lastMsg, thinking };
         }
       }
       return { messages };

@@ -44,6 +44,7 @@ class MessageResponse(MessageBase):
 
     id: int
     session_id: int
+    thinking: str | None = None
     citations: list[Citation] | None = None
     meta_info: dict[str, Any] | None = None
     created_at: datetime

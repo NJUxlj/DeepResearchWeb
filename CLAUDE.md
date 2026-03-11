@@ -54,6 +54,7 @@ DeepResearchWeb/
 │   │   ├── services/    # Business logic
 │   │   ├── agents/      # Agent implementations
 │   │   ├── workers/     # ARQ workers
+│   │   ├── utils/       # Utilities (logger, etc.)
 │   │   └── db/          # Database connection & migrations
 │   └── requirements.txt
 ├── frontend/             # React application
@@ -119,8 +120,8 @@ npm run lint
 
 
 ## Notice about Embedding and Reranker model
-- Embedding model: we currently do not have api, so you temporarily need to use string-matching algorithm (jaro + jaccard similarity) to replace it, although you still need to complete the coding for the Embedding API 
-- Reranker model: we currently do not have api, so you temporarily need to use BM25 to replace it, although you still need to complete the coding for the Reranker API 
+- Embedding model: we currently do not have api, so you temporarily need to use string-matching algorithm (jaro + jaccard similarity) to replace it, although you still need to complete the coding for the Embedding API
+- Reranker model: we currently do not have api, so you temporarily need to use BM25 to replace it, although you still need to complete the coding for the Reranker API
 
 
 
@@ -132,6 +133,7 @@ npm run lint
 - Use `mypy` for type checking
 - Async functions use `async/await`
 - SQLAlchemy 2.0 async style
+- **Logging**: All Python scripts that need to print logs must import `Logger` from `app.utils.logger` in the import section, then initialize a logger with a name representing the current script below the imports
 
 ### TypeScript Frontend
 - ESLint + Prettier for linting
@@ -182,6 +184,20 @@ Key environment variables (see `.env`):
 - `subplans/*.md`: Detailed development plans for each phase
 
 
+### Logger Utility
+
+The project includes a Logger utility at `backend/app/utils/logger.py`:
+
+```python
+from app.utils.logger import get_logger
+
+logger = get_logger("my_module")
+logger.log("This is an info message")
+logger.log("This is a warning", mode="warning")
+logger.log("This is an error", mode="error")
+```
+
+Logs are written to `logs/{name}.log` relative to the project root.
 
 
 
@@ -225,4 +241,3 @@ If any step fails, fix the issue and re-run the acceptance process until all ste
 - `plans/验收标准.md` - Acceptance criteria (CRITICAL - must follow after building code)
 - `scripts/test_all_apis.sh` - API test script
 - `output/` - Test output directory
-

@@ -18,6 +18,16 @@ class ResearchSearcher:
             if settings.TAVILY_API_KEY
             else None
         )
+        # 延迟导入，避免循环依赖
+        self._memory_service = None
+
+    @property
+    def memory_service(self):
+        """延迟加载 memory_service"""
+        if self._memory_service is None:
+            from app.services.memory_service import memory_service
+            self._memory_service = memory_service
+        return self._memory_service
 
     async def search(
         self,
@@ -102,9 +112,37 @@ class ResearchSearcher:
         sub_query: SubQuery,
         user_id: int | None,
     ) -> list[SearchResult]:
-        """记忆检索（占位，实际实现见 MemOS 集成）."""
-        # 返回空列表，实际实现由 MemoryService 提供
-        return []
+        """记忆检索（集成 MemOS）."""
+        if not user_id:
+            return []
+
+        try:
+            memories = await self.memory_service.search(
+                query=sub_query.query,
+                user_id=user_id,
+                top_k=5,
+                search_type="hybrid",
+            )
+
+            results = []
+            for i, mem in enumerate(memories):
+                results.append(SearchResult(
+                    source=f"memory_{i}",
+                    source_type="memory",
+                    content=mem.get("content", ""),
+                    url=None,
+                    title=f"Memory: {mem.get('source_type', 'unknown')}",
+                    relevance_score=mem.get("score", 0.0),
+                    metadata={
+                        "query": sub_query.query,
+                        "memory_type": mem.get("source_type"),
+                    },
+                ))
+            return results
+
+        except Exception as e:
+            print(f"Memory search error: {e}")
+            return []
 
     async def _mcp_search(self, sub_query: SubQuery) -> list[SearchResult]:
         """MCP 工具检索（占位，实际实现见 MCP 集成）."""

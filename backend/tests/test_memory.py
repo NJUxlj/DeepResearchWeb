@@ -14,16 +14,10 @@ class TestMemoryService:
     @pytest.fixture
     def memory_service(self) -> Any:
         """创建 Memory 服务实例 (mocked)."""
-        with patch("app.services.memory_service.MemOSClient") as mock_memos:
-            mock_client = MagicMock()
-            mock_client.search = AsyncMock(return_value=[])
-            mock_client.add = AsyncMock(return_value={"id": "test-id"})
-            mock_memos.return_value = mock_client
+        from app.services.memory_service import MemoryService
 
-            from app.services.memory_service import MemoryService
-
-            service = MemoryService()
-            return service
+        service = MemoryService()
+        return service
 
     async def test_search_memory_empty(
         self, memory_service: Any
@@ -47,6 +41,7 @@ class TestMemoryService:
             preference_type="language",
         )
         assert result is not None
+        assert isinstance(result, list)
 
     async def test_add_tree_memory(
         self, memory_service: Any
@@ -58,6 +53,24 @@ class TestMemoryService:
             metadata={"category": "test"},
         )
         assert result is not None
+        assert "content" in result
+
+    async def test_process_feedback(
+        self, memory_service: Any
+    ) -> None:
+        """测试记忆反馈处理."""
+        chat_history = [
+            {"role": "user", "content": "What is AI?"},
+            {"role": "assistant", "content": "AI is artificial intelligence"},
+        ]
+        result = await memory_service.process_feedback(
+            user_id=1,
+            session_id=1,
+            chat_history=chat_history,
+            feedback_content="I prefer more detailed explanations",
+        )
+        assert result is not None
+        assert "status" in result
 
 
 @pytest.mark.unit
@@ -201,24 +214,10 @@ class TestMemoryAPI:
         )
         return resp.json()["access_token"]
 
-    @patch("app.services.memory_service.MemOSClient")
     async def test_search_memory_api(
-        self, mock_memos: MagicMock, client: AsyncClient
+        self, client: AsyncClient
     ) -> None:
         """测试记忆搜索 API."""
-        # Mock MemOS client
-        mock_client = MagicMock()
-        mock_client.search = AsyncMock(
-            return_value=[
-                {
-                    "id": "1",
-                    "content": "I prefer dark mode",
-                    "type": "preference",
-                }
-            ]
-        )
-        mock_memos.return_value = mock_client
-
         token = await self._get_auth_token(client)
 
         response = await client.get(
@@ -229,17 +228,12 @@ class TestMemoryAPI:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, dict)
+        assert "results" in data
 
-    @patch("app.services.memory_service.MemOSClient")
     async def test_add_tree_memory_api(
-        self, mock_memos: MagicMock, client: AsyncClient
+        self, client: AsyncClient
     ) -> None:
         """测试添加树形记忆 API."""
-        # Mock MemOS client
-        mock_client = MagicMock()
-        mock_client.add = AsyncMock(return_value={"id": "new-memory-id"})
-        mock_memos.return_value = mock_client
-
         token = await self._get_auth_token(client)
 
         response = await client.post(
@@ -252,24 +246,22 @@ class TestMemoryAPI:
         )
         assert response.status_code in [200, 201]
 
-    @patch("app.services.memory_service.MemOSClient")
     async def test_add_preference_api(
-        self, mock_memos: MagicMock, client: AsyncClient
+        self, client: AsyncClient
     ) -> None:
         """测试添加偏好记忆 API."""
-        # Mock MemOS client
-        mock_client = MagicMock()
-        mock_client.add = AsyncMock(return_value={"id": "pref-id"})
-        mock_memos.return_value = mock_client
-
         token = await self._get_auth_token(client)
 
         response = await client.post(
             "/api/v1/memory/preference",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "preference_type": "language",
-                "content": "I prefer English",
+                "session_id": 1,
+                "messages": [
+                    {"role": "user", "content": "I prefer dark mode"},
+                    {"role": "assistant", "content": "好的，我会使用深色模式"},
+                ],
+                "preference_type": "ui",
             },
         )
         assert response.status_code in [200, 201]
@@ -283,3 +275,23 @@ class TestMemoryAPI:
             params={"query": "test"},
         )
         assert response.status_code == 401
+
+    async def test_feedback_api(
+        self, client: AsyncClient
+    ) -> None:
+        """测试记忆反馈 API."""
+        token = await self._get_auth_token(client)
+
+        response = await client.post(
+            "/api/v1/memory/feedback",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "session_id": 1,
+                "feedback": "This memory is incorrect",
+                "chat_history": [
+                    {"role": "user", "content": "What is AI?"},
+                    {"role": "assistant", "content": "AI is artificial intelligence"},
+                ],
+            },
+        )
+        assert response.status_code in [200, 201]

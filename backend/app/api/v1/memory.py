@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Body, Query
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUserDep
 from app.services.memory_service import memory_service
@@ -10,12 +11,39 @@ from app.services.memory_service import memory_service
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
+class SearchQuery(BaseModel):
+    """搜索请求"""
+    query: str
+    top_k: int = 10
+    search_type: str = "hybrid"
+
+
+class FeedbackRequest(BaseModel):
+    """记忆反馈请求"""
+    session_id: int
+    feedback: str
+    chat_history: list[dict[str, str]]
+
+
+class TreeMemoryRequest(BaseModel):
+    """添加树形记忆请求"""
+    content: str
+    metadata: dict[str, Any] | None = None
+
+
+class PreferenceRequest(BaseModel):
+    """添加偏好记忆请求"""
+    session_id: int
+    messages: list[dict[str, str]]
+    preference_type: str = "chat"
+
+
 @router.get("/search")
 async def search_memory(
     current_user: CurrentUserDep,
-    query: str,
-    top_k: int = Query(10, ge=1, le=50),
-    search_type: str = Query("hybrid", regex="^(preference|tree|hybrid)$"),
+    query: str = Query(..., description="搜索查询"),
+    top_k: int = Query(10, ge=1, le=50, description="返回结果数量"),
+    search_type: str = Query("hybrid", regex="^(preference|tree|hybrid)$", description="搜索类型"),
 ):
     """
     搜索用户记忆.
@@ -41,9 +69,7 @@ async def search_memory(
 @router.post("/feedback")
 async def memory_feedback(
     current_user: CurrentUserDep,
-    session_id: int,
-    feedback: str,
-    chat_history: list[dict[str, str]],
+    request: FeedbackRequest,
 ):
     """
     提交记忆反馈.
@@ -52,9 +78,9 @@ async def memory_feedback(
     """
     result = await memory_service.process_feedback(
         user_id=current_user.id,
-        session_id=session_id,
-        chat_history=chat_history,
-        feedback_content=feedback,
+        session_id=request.session_id,
+        chat_history=request.chat_history,
+        feedback_content=request.feedback,
     )
 
     return result
@@ -63,8 +89,7 @@ async def memory_feedback(
 @router.post("/tree")
 async def add_tree_memory(
     current_user: CurrentUserDep,
-    content: str,
-    metadata: dict[str, Any] | None = None,
+    request: TreeMemoryRequest,
 ):
     """
     手动添加树形记忆.
@@ -72,9 +97,9 @@ async def add_tree_memory(
     用户可以直接添加知识点到记忆树中.
     """
     result = await memory_service.add_tree_memory(
-        content=content,
+        content=request.content,
         user_id=current_user.id,
-        metadata=metadata,
+        metadata=request.metadata,
     )
 
     return {
@@ -86,9 +111,7 @@ async def add_tree_memory(
 @router.post("/preference")
 async def add_preference_memory(
     current_user: CurrentUserDep,
-    session_id: int,
-    messages: list[dict[str, str]],
-    preference_type: str = "chat",
+    request: PreferenceRequest,
 ):
     """
     手动添加偏好记忆.
@@ -96,10 +119,10 @@ async def add_preference_memory(
     从对话消息中提取并存储用户偏好.
     """
     result = await memory_service.add_preference(
-        messages=messages,
+        messages=request.messages,
         user_id=current_user.id,
-        session_id=session_id,
-        preference_type=preference_type,
+        session_id=request.session_id,
+        preference_type=request.preference_type,
     )
 
     return {

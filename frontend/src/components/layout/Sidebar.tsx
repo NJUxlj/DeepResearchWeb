@@ -18,7 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onSessionSelect }) 
   const { sessions, setSessions, addSession, removeSession, setLoading } = useSessionStore();
   const { currentSession, clearChat, setCurrentSession } = useChatStore();
   const { user, logout } = useAuthStore();
-  const [isCreating, setIsCreating] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     loadSessions();

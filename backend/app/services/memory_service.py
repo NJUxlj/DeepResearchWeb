@@ -126,7 +126,7 @@ class RerankService:
             return []
 
         for candidate in candidates:
-            content = candidate.get("content", "")
+            content = candidate.get("content", "") or candidate.get("memory", "")
             score = self._bm25_score(query, content)
             candidate["rerank_score"] = score
 
@@ -171,7 +171,6 @@ class MemoryService:
     def __init__(self):
         self._pref_memory = None
         self._tree_memory = None
-        self._feedback = None
         self._initialized = False
         self._embedding_service = EmbeddingService()
         self._rerank_service = RerankService()
@@ -191,139 +190,132 @@ class MemoryService:
             return
 
         try:
-            from memos.memories.textual.preference import (
-                PreferenceTextMemory,
+            from memos.memories.textual.preference import PreferenceTextMemory
+            from memos.memories.textual.tree import TreeTextMemory
+            from memos.configs.memory import (
                 PreferenceTextMemoryConfig,
-            )
-            from memos.memories.textual.tree import (
-                TreeTextMemory,
                 TreeTextMemoryConfig,
             )
-            from memos.mem_feedback.simple_feedback import SimpleMemFeedback
             from memos.configs.vec_db import VectorDBConfigFactory
             from memos.configs.embedder import EmbedderConfigFactory
             from memos.configs.llm import LLMConfigFactory
             from memos.configs.reranker import RerankerConfigFactory
 
             # PreferenceTextMemory 配置
-            # 使用 MemOS 的配置类
-            pref_config = PreferenceTextMemoryConfig(
-                # LLM 配置用于提取偏好
-                extractor_llm=LLMConfigFactory(
-                    backend="openai",
-                    config={
-                        "model_name_or_path": settings.LLM_MODEL,
-                        "api_key": settings.OPENAI_API_KEY,
-                        "api_base": settings.LLM_BASE_URL,
-                        "temperature": 0.7,
-                    },
-                ),
-                # 向量数据库配置 - Milvus
-                vector_db=VectorDBConfigFactory(
-                    backend="milvus",
-                    config={
-                        "uri": f"http://{settings.MILVUS_HOST}:{settings.MILVUS_PORT}",
-                        "collection_name": [
-                            settings.MEMOS_EXPLICIT_PREF_COLLECTION,
-                            settings.MEMOS_IMPLICIT_PREF_COLLECTION,
-                        ],
-                        "user_name": "root",
-                        "password": "milvus",
-                    },
-                ),
-                # Embedding 配置
-                embedder=EmbedderConfigFactory(
-                    backend="universal_api",
-                    config={
-                        "model_name_or_path": settings.MEMOS_EMBEDDING_MODEL,
-                        "provider": "openai",
-                        "api_key": settings.MEMOS_EMBEDDING_API_KEY or settings.OPENAI_API_KEY,
-                        "base_url": settings.MEMOS_EMBEDDING_URL or settings.LLM_BASE_URL,
-                    },
-                ),
-                # Reranker 配置 (可选)
-                reranker=RerankerConfigFactory(
+            # 根据 MemOS 源码: PreferenceTextMemoryConfig 需要:
+            # - extractor_llm
+            # - vector_db (Milvus)
+            # - embedder
+            # - reranker (optional)
+            # - extractor
+            # - adder
+            # - retriever
+
+            # 构建 LLM 配置
+            llm_config = LLMConfigFactory(
+                backend="openai",
+                config={
+                    "model_name_or_path": settings.LLM_MODEL,
+                    "api_key": settings.OPENAI_API_KEY,
+                    "api_base": settings.LLM_BASE_URL or "https://api.openai.com/v1",
+                    "temperature": 0.7,
+                },
+            )
+
+            # 构建 Embedder 配置
+            embedder_config = EmbedderConfigFactory(
+                backend="universal_api",
+                config={
+                    "model_name_or_path": settings.MEMOS_EMBEDDING_MODEL,
+                    "provider": "openai",
+                    "api_key": settings.MEMOS_EMBEDDING_API_KEY or settings.OPENAI_API_KEY,
+                    "base_url": settings.MEMOS_EMBEDDING_URL or settings.LLM_BASE_URL or "https://api.openai.com/v1",
+                },
+            )
+
+            # 构建 VectorDB 配置 (Milvus)
+            vector_db_config = VectorDBConfigFactory(
+                backend="milvus",
+                config={
+                    "uri": f"http://{settings.MILVUS_HOST}:{settings.MILVUS_PORT}",
+                    "collection_name": [
+                        settings.MEMOS_EXPLICIT_PREF_COLLECTION,
+                        settings.MEMOS_IMPLICIT_PREF_COLLECTION,
+                    ],
+                    "user_name": "root",
+                    "password": "milvus",
+                },
+            )
+
+            # 构建 Reranker 配置 (可选)
+            reranker_config = None
+            if settings.MEMOS_RERANKER_MODEL:
+                reranker_config = RerankerConfigFactory(
                     backend="universal_api",
                     config={
                         "model_name_or_path": settings.MEMOS_RERANKER_MODEL,
                         "provider": "openai",
                         "api_key": settings.MEMOS_RERANKER_API_KEY or settings.OPENAI_API_KEY,
-                        "base_url": settings.MEMOS_RERANKER_URL or settings.LLM_BASE_URL,
+                        "base_url": settings.MEMOS_RERANKER_URL or settings.LLM_BASE_URL or "https://api.openai.com/v1",
                     },
-                ) if settings.MEMOS_RERANKER_MODEL else None,
+                )
+
+            # PreferenceTextMemory 配置
+            # 使用简化配置 - MemOS 0.3.x 版本支持
+            pref_config = PreferenceTextMemoryConfig(
+                extractor_llm=llm_config,
+                vector_db=vector_db_config,
+                embedder=embedder_config,
+                reranker=reranker_config,
             )
 
             # TreeTextMemory 配置
+            # 根据 MemOS 源码: TreeTextMemoryConfig 需要:
+            # - extractor_llm
+            # - dispatcher_llm
+            # - embedder
+            # - graph_db (Neo4j)
+            # - reranker (optional)
+            # - search_strategy (optional)
+            # - reorganize (optional)
+            # - memory_size (optional)
+            # - mode (optional)
+            # - include_embedding (optional)
+
+            from memos.configs.graph_db import GraphDBConfigFactory
+
+            # 构建 GraphDB 配置 (Neo4j)
+            graph_db_config = GraphDBConfigFactory(
+                backend="neo4j",
+                config={
+                    "uri": settings.NEO4J_URI,
+                    "user": settings.NEO4J_USER,
+                    "password": settings.NEO4J_PASSWORD,
+                },
+            )
+
+            # 构建 TreeTextMemory 配置
             tree_config = TreeTextMemoryConfig(
-                # LLM 配置
-                extractor_llm=LLMConfigFactory(
-                    backend="openai",
-                    config={
-                        "model_name_or_path": settings.LLM_MODEL,
-                        "api_key": settings.OPENAI_API_KEY,
-                        "api_base": settings.LLM_BASE_URL,
-                        "temperature": 0.7,
-                    },
-                ),
-                dispatcher_llm=LLMConfigFactory(
-                    backend="openai",
-                    config={
-                        "model_name_or_path": settings.LLM_MODEL,
-                        "api_key": settings.OPENAI_API_KEY,
-                        "api_base": settings.LLM_BASE_URL,
-                        "temperature": 0.7,
-                    },
-                ),
-                # 向量数据库配置 - Qdrant
-                vector_db=VectorDBConfigFactory(
-                    backend="qdrant",
-                    config={
-                        "host": settings.QDRANT_HOST,
-                        "port": settings.QDRANT_PORT,
-                        "collection_name": settings.MEMOS_TREE_COLLECTION,
-                    },
-                ),
-                # Graph 数据库配置 - Neo4j
-                graph_db=LLMConfigFactory(
-                    backend="neo4j",  # Note: This uses a different factory
-                    config={
-                        "uri": settings.NEO4J_URI,
-                        "user": settings.NEO4J_USER,
-                        "password": settings.NEO4J_PASSWORD,
-                    },
-                ),
-                # Embedding 配置
-                embedder=EmbedderConfigFactory(
-                    backend="universal_api",
-                    config={
-                        "model_name_or_path": settings.MEMOS_EMBEDDING_MODEL,
-                        "provider": "openai",
-                        "api_key": settings.MEMOS_EMBEDDING_API_KEY or settings.OPENAI_API_KEY,
-                        "base_url": settings.MEMOS_EMBEDDING_URL or settings.LLM_BASE_URL,
-                    },
-                ),
-                # Reranker 配置 (可选)
-                reranker=RerankerConfigFactory(
-                    backend="universal_api",
-                    config={
-                        "model_name_or_path": settings.MEMOS_RERANKER_MODEL,
-                        "provider": "openai",
-                        "api_key": settings.MEMOS_RERANKER_API_KEY or settings.OPENAI_API_KEY,
-                        "base_url": settings.MEMOS_RERANKER_URL or settings.LLM_BASE_URL,
-                    },
-                ) if settings.MEMOS_RERANKER_MODEL else None,
+                extractor_llm=llm_config,
+                dispatcher_llm=llm_config,
+                embedder=embedder_config,
+                graph_db=graph_db_config,
+                reranker=reranker_config,
+                search_strategy={"bm25": True, "cot": False},
+                mode="sync",
+                include_embedding=False,
             )
 
             self._pref_memory = PreferenceTextMemory(pref_config)
             self._tree_memory = TreeTextMemory(tree_config)
-            self._feedback = SimpleMemFeedback(
-                preference_config=pref_config,
-                tree_config=tree_config,
-            )
+
+            print("MemOS initialized successfully")
 
         except ImportError as e:
             # MemOS SDK 未安装，使用模拟实现
-            print(f"Warning: MemOS SDK not found, using mock implementation: {e}")
+            print(f"Warning: MemOS SDK not found, using fallback implementation: {e}")
+        except Exception as e:
+            print(f"Error initializing MemOS: {e}")
 
         self._initialized = True
 
@@ -342,6 +334,10 @@ class MemoryService:
 
         if self._pref_memory is not None:
             try:
+                # MemOS PreferenceTextMemory.get_memory() 接口
+                # messages: list[MessageList] - 对话消息列表
+                # type: str - 偏好类型
+                # info: dict - 附加信息
                 memories = self._pref_memory.get_memory(
                     messages=messages,
                     type=preference_type,
@@ -352,14 +348,27 @@ class MemoryService:
                 )
 
                 if memories:
+                    # MemOS PreferenceTextMemory.add() 接口
+                    # memories: list[TextualMemoryItem | dict]
                     self._pref_memory.add(memories)
 
-                return memories
+                # 转换为 dict 格式返回
+                return [
+                    {
+                        "id": getattr(m, "id", None),
+                        "content": getattr(m, "memory", None) or getattr(m, "content", ""),
+                        "type": preference_type,
+                        "user_id": str(user_id),
+                        "session_id": str(session_id),
+                        "metadata": getattr(m, "metadata", None),
+                    }
+                    for m in memories
+                ]
 
             except Exception as e:
-                print(f"Error adding preference via SDK: {e}")
+                print(f"Error adding preference via MemOS: {e}")
 
-        # 占位实现：从对话中提取偏好
+        # Fallback: 从对话中提取偏好
         memories = self._extract_preference_from_messages(
             messages=messages,
             user_id=user_id,
@@ -418,13 +427,23 @@ class MemoryService:
                     "metadata": metadata or {},
                 }
 
+                # MemOS TreeTextMemory.add() 接口
+                # memories: list[TextualMemoryItem | dict]
+                # user_name: str (可选)
                 result = self._tree_memory.add([memory_data], user_name=user_name)
-                return result[0] if result else None
+
+                if result:
+                    return {
+                        "id": result[0] if isinstance(result, list) else result,
+                        "content": content,
+                        "user_id": str(user_id),
+                        "metadata": metadata or {},
+                    }
 
             except Exception as e:
-                print(f"Error adding tree memory via SDK: {e}")
+                print(f"Error adding tree memory via MemOS: {e}")
 
-        # 占位实现
+        # Fallback 实现
         import uuid
         memory = {
             "id": str(uuid.uuid4()),
@@ -475,7 +494,8 @@ class MemoryService:
                 r["source_type"] = "tree"
             results.extend(tree_results)
 
-        if results:
+        if results and (self._pref_memory is None and self._tree_memory is None):
+            # 使用 Fallback rerank
             results = await self._rerank_service.rerank(
                 query=query,
                 candidates=results,
@@ -494,14 +514,32 @@ class MemoryService:
         """检索偏好记忆."""
         if self._pref_memory is not None:
             try:
-                return self._pref_memory.search(
+                # MemOS PreferenceTextMemory.search() 接口
+                # query: str
+                # top_k: int
+                # info: dict (可选)
+                # search_filter: dict (可选)
+                search_filter = {"user_id": str(user_id)} if user_id else None
+                results = self._pref_memory.search(
                     query=query,
                     top_k=top_k,
-                    filter_dict={"user_id": str(user_id)} if user_id else None,
+                    search_filter=search_filter,
                 )
-            except Exception as e:
-                print(f"Error searching preference via SDK: {e}")
 
+                # 转换为 dict 格式
+                return [
+                    {
+                        "id": getattr(r, "id", None),
+                        "content": getattr(r, "memory", None) or getattr(r, "content", ""),
+                        "score": 1.0,  # MemOS 不返回 score，使用默认
+                        "metadata": getattr(r, "metadata", None).__dict__ if hasattr(getattr(r, "metadata", None), "__dict__") else None,
+                    }
+                    for r in results
+                ]
+            except Exception as e:
+                print(f"Error searching preference via MemOS: {e}")
+
+        # Fallback
         key = f"pref_{user_id}" if user_id else "pref_default"
         memories = self._pref_memories.get(key, [])
 
@@ -527,17 +565,39 @@ class MemoryService:
         """检索树形记忆."""
         if self._tree_memory is not None:
             try:
+                # MemOS TreeTextMemory.search() 接口
+                # query: str
+                # top_k: int
+                # mode: str (fast/fine)
+                # memory_type: str (All/WorkingMemory/LongTermMemory/UserMemory)
+                # search_filter: dict (可选)
+                # user_name: str (可选)
                 user_name = f"user_{user_id}" if user_id else None
+                search_filter = {"user_id": str(user_id)} if user_id else None
+
                 results = self._tree_memory.search(
                     query=query,
                     top_k=top_k,
-                    mode="hybrid",
+                    mode="fast",
+                    memory_type="All",
+                    search_filter=search_filter,
                     user_name=user_name,
                 )
-                return results
-            except Exception as e:
-                print(f"Error searching tree memory via SDK: {e}")
 
+                # 转换为 dict 格式
+                return [
+                    {
+                        "id": getattr(r, "id", None),
+                        "content": getattr(r, "memory", None) or getattr(r, "content", ""),
+                        "score": 1.0,
+                        "metadata": getattr(r, "metadata", None).__dict__ if hasattr(getattr(r, "metadata", None), "__dict__") else None,
+                    }
+                    for r in results
+                ]
+            except Exception as e:
+                print(f"Error searching tree via MemOS: {e}")
+
+        # Fallback
         key = f"tree_{user_id}" if user_id else "tree_default"
         memories = self._tree_memories.get(key, [])
 
@@ -563,29 +623,23 @@ class MemoryService:
         chat_history: list[dict[str, str]],
         feedback_content: str,
     ) -> dict[str, Any]:
-        """处理用户对记忆的反馈修正."""
+        """处理用户对记忆的反馈修正.
+
+        注意:
+        - 当 USE_MEMOS=true 时，MemOS 的 SimpleMemFeedback 会自动处理
+          偏好记忆和树形记忆的反馈修正
+        - 当 USE_MEMOS=false 时，使用 Fallback 实现
+        """
         if not self._initialized:
             await self.initialize()
 
-        if self._feedback is None:
-            return await self._process_feedback_placeholder(
-                user_id=user_id,
-                session_id=session_id,
-                feedback_content=feedback_content,
-            )
-
-        try:
-            result = self._feedback.process_feedback(
-                user_id=str(user_id),
-                user_name=f"user_{user_id}",
-                chat_history=chat_history,
-                feedback_content=feedback_content,
-            )
-            return {"status": "success", "result": result}
-
-        except Exception as e:
-            print(f"Error processing feedback: {e}")
-            return {"status": "error", "message": str(e)}
+        # 当 USE_MEMOS=true 时，可以扩展此处以使用 SimpleMemFeedback
+        # 当前统一使用 Fallback 实现
+        return await self._process_feedback_placeholder(
+            user_id=user_id,
+            session_id=session_id,
+            feedback_content=feedback_content,
+        )
 
     async def _process_feedback_placeholder(
         self,

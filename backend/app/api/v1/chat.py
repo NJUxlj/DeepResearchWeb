@@ -52,6 +52,7 @@ async def generate_chat_stream(
         # 调用 Chat Agent 获取流式响应
         chat_agent = ChatAgent()
         assistant_content = ""
+        assistant_thinking = ""
         citations: list[Citation] = []
 
         async for chunk in chat_agent.stream_chat(
@@ -61,7 +62,13 @@ async def generate_chat_stream(
                 for m in history[:-1]  # 排除刚添加的用户消息
             ],
         ):
-            if chunk["type"] == "content":
+            if chunk["type"] == "thinking":
+                # 累积思维链内容
+                assistant_thinking += chunk["content"]
+                # 发送思维链事件
+                yield f"event: thinking\ndata: {json.dumps({'content': chunk['content']})}\n\n"
+
+            elif chunk["type"] == "content":
                 assistant_content += chunk["content"]
                 yield f"event: chunk\ndata: {json.dumps({'content': chunk['content']})}\n\n"
 
@@ -74,6 +81,7 @@ async def generate_chat_stream(
             session_id=session.id,
             role="assistant",
             content=assistant_content,
+            thinking=assistant_thinking if assistant_thinking else None,
             citations=citations_data,
         )
         db.add(assistant_msg)
@@ -213,6 +221,7 @@ async def send_message(
         session_id=session.id,
         role="assistant",
         content=response["content"],
+        thinking=response.get("thinking"),
         citations=citations_data,
     )
     db.add(assistant_msg)

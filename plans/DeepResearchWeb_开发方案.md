@@ -181,6 +181,8 @@ backend/
 │   ├── workers/
 │   │   ├── research_worker.py   # ARQ Worker: DeepResearch 异步执行
 │   │   └── memory_worker.py     # ARQ Worker: 记忆写入异步执行
+│   ├── utils/
+│   │   └── logger.py            # 日志工具类
 │   └── db/
 │       ├── database.py          # 数据库连接 & 连接池配置
 │       └── migrations/          # Alembic 迁移

@@ -14,6 +14,7 @@ export function useChat() {
     setMessages,
     addMessage,
     updateLastMessage,
+    updateLastMessageThinking,
     setLoading,
     setError,
     clearChat,
@@ -50,6 +51,7 @@ export function useChat() {
         session_id: currentSession?.id || 0,
         role: "assistant",
         content: "",
+        thinking: "",
         created_at: new Date().toISOString(),
       };
       addMessage(assistantMessage);
@@ -62,8 +64,15 @@ export function useChat() {
         };
 
         const currentContent: string[] = [];
+        const currentThinking: string[] = [];
 
         cleanupRef.current = createChatStream(request, {
+          onThinking: (thinkingChunk) => {
+            console.log("[Chat] Received thinking chunk:", thinkingChunk);
+            currentThinking.push(thinkingChunk);
+            updateLastMessageThinking(currentThinking.join(""));
+            console.log("[Chat] Updated thinking:", currentThinking.join(""));
+          },
           onChunk: (chunk) => {
             currentContent.push(chunk);
             updateLastMessage(currentContent.join(""));
@@ -72,15 +81,17 @@ export function useChat() {
             // TODO: 更新消息的引用信息
           },
           onDone: (_messageId) => {
-            console.log("Stream done");
+            console.log("[Chat] Stream done, messageId:", _messageId);
             setLoading(false);
           },
           onError: (errorMsg) => {
+            console.error("[Chat] Stream error:", errorMsg);
             setError(errorMsg);
             setLoading(false);
           },
         });
       } catch (err) {
+        console.error("[Chat] Send message error:", err);
         setError(err instanceof Error ? err.message : "Failed to send message");
         setLoading(false);
       }
@@ -93,6 +104,7 @@ export function useChat() {
       setError,
       addMessage,
       updateLastMessage,
+      updateLastMessageThinking,
     ]
   );
 
@@ -103,6 +115,7 @@ export function useChat() {
 
       try {
         const session = await sessionApi.get(sessionId);
+        console.log("[Chat] Loaded session messages:", session.messages);
         setCurrentSession(session);
         setMessages(session.messages);
       } catch (err) {

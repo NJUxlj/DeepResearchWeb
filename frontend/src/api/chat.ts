@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
 export type StreamCallback = {
   onChunk?: (content: string) => void;
+  onThinking?: (content: string) => void;
   onCitations?: (citations: Citation[]) => void;
   onDone?: (messageId: number) => void;
   onError?: (error: string) => void;
@@ -98,6 +99,9 @@ export function createChatStream(
                 const data = JSON.parse(eventData);
 
                 switch (eventType) {
+                  case "thinking":
+                    callbacks.onThinking?.(data.content || "");
+                    break;
                   case "chunk":
                     callbacks.onChunk?.(data.content || "");
                     break;
