@@ -19,7 +19,24 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // 从 localStorage 获取 token 并添加到请求头
-    const token = localStorage.getItem("token");
+    // 优先从 zustand persist 存储中获取 (auth-storage)
+    let token: string | null = null;
+    
+    const authStorage = localStorage.getItem("auth-storage");
+    if (authStorage) {
+      try {
+        const parsed = JSON.parse(authStorage);
+        token = parsed?.state?.token;
+      } catch (e) {
+        console.error("Failed to parse auth-storage:", e);
+      }
+    }
+    
+    // 兼容旧的直接存储方式
+    if (!token) {
+      token = localStorage.getItem("token");
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -39,12 +56,14 @@ apiClient.interceptors.response.use(
     // 这样可以避免 auth 初始化时的无限循环
     if (error.response?.status === 401 && url.includes('/auth/me')) {
       // 只清除 token，不重定向
+      localStorage.removeItem("auth-storage");
       localStorage.removeItem("token");
       return Promise.reject(error);
     }
 
     // 其他 401 错误才重定向到登录页
     if (error.response?.status === 401) {
+      localStorage.removeItem("auth-storage");
       localStorage.removeItem("token");
       window.location.href = "/login";
     }

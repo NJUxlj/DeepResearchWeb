@@ -20,7 +20,7 @@ export const toolsApi = {
   /**
    * 获取单个工具详情
    */
-  get: async (id: string): Promise<ToolConfig> => {
+  get: async (id: number): Promise<ToolConfig> => {
     return apiRequest<ToolConfig>({
       method: "GET",
       url: `/tools/${id}`,
@@ -41,7 +41,7 @@ export const toolsApi = {
   /**
    * 更新工具
    */
-  update: async (id: string, data: Partial<ToolConfig>): Promise<ToolConfig> => {
+  update: async (id: number, data: Partial<ToolConfig>): Promise<ToolConfig> => {
     return apiRequest<ToolConfig>({
       method: "PUT",
       url: `/tools/${id}`,
@@ -52,7 +52,7 @@ export const toolsApi = {
   /**
    * 删除工具
    */
-  delete: async (id: string): Promise<void> => {
+  delete: async (id: number): Promise<void> => {
     return apiRequest<void>({
       method: "DELETE",
       url: `/tools/${id}`,
@@ -62,7 +62,7 @@ export const toolsApi = {
   /**
    * 启用/禁用工具
    */
-  toggle: async (id: string, enabled: boolean): Promise<ToolConfig> => {
+  toggle: async (id: number, enabled: boolean): Promise<ToolConfig> => {
     return apiRequest<ToolConfig>({
       method: "PATCH",
       url: `/tools/${id}/toggle`,

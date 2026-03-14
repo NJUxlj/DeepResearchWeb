@@ -33,6 +33,8 @@ DeepResearchWeb is a web-based deep research agent system with:
 | **backend-developer** | 后端开发专家，专注于 FastAPI + SQLAlchemy | FastAPI 路由实现、SQLAlchemy 模型编写、服务层逻辑、ARQ Workers、API 端点开发 | 创建 API 端点、编写数据库模型、实现业务逻辑服务、调试后端问题 |
 | **frontend-dev** | 前端开发专家，专注于 React + TypeScript | React 组件开发、UI 元素实现、状态管理、数据获取、响应式布局 | 开发 ChatUI、实现引用面板、构建表单组件、设置 TanStack Query |
 | **devops-engineer** | DevOps 工程师，专注于 Docker 和部署 | Docker 配置、Docker Compose 编排、环境变量管理、服务依赖配置、CI/CD | 编写 Dockerfile、配置 docker-compose.yml、管理环境变量、故障排查 |
+| **system-tester** | 系统测试专家，负责对项目进行全面模拟测试和正式场景全量测试 | Docker 容器测试、单元测试、API 测试、日志分析、端到端验证 | 代码构建后验收测试、Docker 容器状态检查、API 端点测试、日志错误检查 |
+| **system-fixer** | 系统修复专家，负责根据测试结果进行问题修复 | 问题定位、根因分析、代码修复、配置修正、循环测试验证 | 修复测试失败、解决容器问题、修正 API 错误、解决配置问题 |
 
 ### Agent Delegation Strategy
 
@@ -43,6 +45,23 @@ DeepResearchWeb is a web-based deep research agent system with:
 | API/后端逻辑 | `backend-developer` | 实现 FastAPI 端点、编写 SQLAlchemy 模型 |
 | UI/前端交互 | `frontend-dev` | 开发 ChatUI、引用面板、配置页面 |
 | Docker/部署 | `devops-engineer` | 编写 Dockerfile、docker-compose.yml |
+| 系统测试验收 | `system-tester` | 执行验收测试、检查容器状态、运行 API 测试 |
+| 测试问题修复 | `system-fixer` | 修复测试失败、解决容器问题、修正 API 错误 |
+
+### Test-Fix Cycle
+
+When testing reveals issues, use the following cycle:
+
+1. **测试阶段**: 调用 `system-tester` 执行完整验收测试
+2. **修复阶段**: 如测试失败，调用 `system-fixer` 进行问题修复
+3. **循环验证**: 修复完成后重新调用 `system-tester` 进行测试
+4. **循环结束**: 测试全部通过后结束循环
+
+**测试通过条件**:
+- 所有 Docker 容器 running
+- pytest 测试全部通过
+- 所有 API 端点正常响应
+- 日志中无 error/exception/failed 关键字
 
 
 ## Master Plan

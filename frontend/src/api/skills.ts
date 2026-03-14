@@ -20,7 +20,7 @@ export const skillsApi = {
   /**
    * 获取单个 Skill 详情
    */
-  get: async (id: string): Promise<SkillConfig> => {
+  get: async (id: number): Promise<SkillConfig> => {
     return apiRequest<SkillConfig>({
       method: "GET",
       url: `/skills/${id}`,
@@ -41,7 +41,7 @@ export const skillsApi = {
   /**
    * 更新 Skill
    */
-  update: async (id: string, data: Partial<SkillConfig>): Promise<SkillConfig> => {
+  update: async (id: number, data: Partial<SkillConfig>): Promise<SkillConfig> => {
     return apiRequest<SkillConfig>({
       method: "PUT",
       url: `/skills/${id}`,
@@ -52,7 +52,7 @@ export const skillsApi = {
   /**
    * 删除 Skill
    */
-  delete: async (id: string): Promise<void> => {
+  delete: async (id: number): Promise<void> => {
     return apiRequest<void>({
       method: "DELETE",
       url: `/skills/${id}`,
@@ -62,7 +62,7 @@ export const skillsApi = {
   /**
    * 启用/禁用 Skill
    */
-  toggle: async (id: string, enabled: boolean): Promise<SkillConfig> => {
+  toggle: async (id: number, enabled: boolean): Promise<SkillConfig> => {
     return apiRequest<SkillConfig>({
       method: "PATCH",
       url: `/skills/${id}/toggle`,

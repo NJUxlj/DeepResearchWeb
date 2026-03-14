@@ -20,7 +20,7 @@ export const mcpApi = {
   /**
    * 获取单个 MCP 服务器详情
    */
-  get: async (id: string): Promise<MCPConfig> => {
+  get: async (id: number): Promise<MCPConfig> => {
     return apiRequest<MCPConfig>({
       method: "GET",
       url: `/mcp/servers/${id}`,
@@ -41,7 +41,7 @@ export const mcpApi = {
   /**
    * 更新 MCP 服务器
    */
-  update: async (id: string, data: Partial<MCPConfig>): Promise<MCPConfig> => {
+  update: async (id: number, data: Partial<MCPConfig>): Promise<MCPConfig> => {
     return apiRequest<MCPConfig>({
       method: "PUT",
       url: `/mcp/servers/${id}`,
@@ -52,7 +52,7 @@ export const mcpApi = {
   /**
    * 删除 MCP 服务器
    */
-  delete: async (id: string): Promise<void> => {
+  delete: async (id: number): Promise<void> => {
     return apiRequest<void>({
       method: "DELETE",
       url: `/mcp/servers/${id}`,
@@ -62,7 +62,7 @@ export const mcpApi = {
   /**
    * 启用/禁用 MCP 服务器
    */
-  toggle: async (id: string, enabled: boolean): Promise<MCPConfig> => {
+  toggle: async (id: number, enabled: boolean): Promise<MCPConfig> => {
     return apiRequest<MCPConfig>({
       method: "PATCH",
       url: `/mcp/servers/${id}/toggle`,
@@ -73,7 +73,7 @@ export const mcpApi = {
   /**
    * 测试 MCP 服务器连接
    */
-  test: async (id: string): Promise<{ success: boolean; message: string }> => {
+  test: async (id: number): Promise<{ success: boolean; message: string }> => {
     return apiRequest<{ success: boolean; message: string }>({
       method: "POST",
       url: `/mcp/servers/${id}/test`,
