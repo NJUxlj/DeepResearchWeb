@@ -23,6 +23,27 @@ DeepResearchWeb is a web-based deep research agent system with:
 5. **frontend_dev** - Builds user interface and integrates with backend APIs
 6. **devops** - Manages Docker configuration, deployment, and environment
 
+### Sub-Agents Table
+
+| Agent Name | Description | Capabilities | Use Case Examples |
+|------------|-------------|--------------|-------------------|
+| **deepresearchweb-lead** | 项目主协调 Agent，负责统筹整个项目的开发工作 | 任务分析与分解、智能委派给其他 Agent、结果整合、质量控制 | 协调全栈开发任务、设置 Docker 环境、构建多阶段工作流 |
+| **plan-decomposer** | 方案分解专家，负责将总开发方案拆分为可执行的子方案 | 阅读总方案、分析模块依赖、拆分方案、输出子方案 | 将 P0-P6 开发方案拆分为独立可执行的子计划 |
+| **system-architect** | 系统架构师，负责技术选型和架构设计 | 系统架构设计、技术选型决策、数据库模型设计、API 接口定义 | 设计认证架构、设计 MemOS 存储层、定义 DeepResearch API 契约 |
+| **backend-developer** | 后端开发专家，专注于 FastAPI + SQLAlchemy | FastAPI 路由实现、SQLAlchemy 模型编写、服务层逻辑、ARQ Workers、API 端点开发 | 创建 API 端点、编写数据库模型、实现业务逻辑服务、调试后端问题 |
+| **frontend-dev** | 前端开发专家，专注于 React + TypeScript | React 组件开发、UI 元素实现、状态管理、数据获取、响应式布局 | 开发 ChatUI、实现引用面板、构建表单组件、设置 TanStack Query |
+| **devops-engineer** | DevOps 工程师，专注于 Docker 和部署 | Docker 配置、Docker Compose 编排、环境变量管理、服务依赖配置、CI/CD | 编写 Dockerfile、配置 docker-compose.yml、管理环境变量、故障排查 |
+
+### Agent Delegation Strategy
+
+| Task Type | Delegate To | Example |
+|-----------|-------------|---------|
+| 分解总方案 | `plan-decomposer` | 将开发方案拆分为子计划 |
+| 技术选型/架构设计 | `system-architect` | 设计 DeepResearch 工作流、设计数据库模型 |
+| API/后端逻辑 | `backend-developer` | 实现 FastAPI 端点、编写 SQLAlchemy 模型 |
+| UI/前端交互 | `frontend-dev` | 开发 ChatUI、引用面板、配置页面 |
+| Docker/部署 | `devops-engineer` | 编写 Dockerfile、docker-compose.yml |
+
 
 ## Master Plan
 
