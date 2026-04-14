@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Wrench, Plus, Trash2, Power, PowerOff, X, Pencil } from "lucide-react";
+import { Wrench, Plus, Trash2, Power, PowerOff, X, Pencil, Loader2 } from "lucide-react";
 import { toolsApi } from "@/api/tools";
 import type { ToolConfig } from "@/types/citation";
 
@@ -45,12 +45,14 @@ export function ToolsConfig() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("确定要删除这个工具吗？")) return;
+    // TODO: 后续应替换为自定义 Modal/Dialog 组件，以保持 UI 一致性
+    if (!window.confirm("确定要删除这个工具吗？")) return;
     try {
       await toolsApi.delete(id);
       setTools((prev) => prev.filter((tool) => tool.id !== id));
     } catch (err) {
       console.error("Failed to delete tool:", err);
+      alert("删除工具失败，请重试");
     }
   };
 
@@ -58,9 +60,9 @@ export function ToolsConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await toolsApi.create(data as Omit<ToolConfig, "id">);
+      const newTool = await toolsApi.create(data as Omit<ToolConfig, "id">);
+      setTools((prev) => [...prev, newTool]);
       setIsModalOpen(false);
-      loadTools();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "创建工具失败");
       console.error("Failed to create tool:", err);
@@ -79,10 +81,12 @@ export function ToolsConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await toolsApi.update(editingTool.id, data);
+      const updatedTool = await toolsApi.update(editingTool.id, data);
+      setTools((prev) =>
+        prev.map((tool) => (tool.id === editingTool.id ? updatedTool : tool))
+      );
       setIsEditModalOpen(false);
       setEditingTool(null);
-      loadTools();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "更新工具失败");
       console.error("Failed to update tool:", err);
@@ -147,7 +151,7 @@ export function ToolsConfig() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {tool.id !== 0 && (
+                  {tool.tool_type !== "custom" && (
                     <>
                       <button
                         onClick={() => handleEdit(tool)}
@@ -218,6 +222,16 @@ interface ToolFormModalProps {
 }
 
 function ToolFormModal({ onClose, onSubmit, isSubmitting, error }: ToolFormModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -330,7 +344,7 @@ function ToolFormModal({ onClose, onSubmit, isSubmitting, error }: ToolFormModal
               id="enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="enabled" className="text-sm font-medium">
               启用
@@ -348,8 +362,9 @@ function ToolFormModal({ onClose, onSubmit, isSubmitting, error }: ToolFormModal
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "创建中..." : "创建"}
             </button>
           </div>
@@ -368,6 +383,16 @@ interface ToolEditModalProps {
 }
 
 function ToolEditModal({ tool, onClose, onSubmit, isSubmitting, error }: ToolEditModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const [formData, setFormData] = useState({
     name: tool.name,
     description: tool.description || "",
@@ -480,7 +505,7 @@ function ToolEditModal({ tool, onClose, onSubmit, isSubmitting, error }: ToolEdi
               id="edit-enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="edit-enabled" className="text-sm font-medium">
               启用
@@ -498,8 +523,9 @@ function ToolEditModal({ tool, onClose, onSubmit, isSubmitting, error }: ToolEdi
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "保存中..." : "保存"}
             </button>
           </div>

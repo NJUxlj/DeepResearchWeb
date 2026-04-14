@@ -28,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           token: response.access_token,
           isAuthenticated: true,
+          // 注意: LoginResponse 不包含 user 字段，用户信息需通过单独的 API 获取
         }),
 
       setUser: (user) => set({ user }),

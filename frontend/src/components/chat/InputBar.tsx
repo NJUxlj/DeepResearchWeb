@@ -55,10 +55,10 @@ export default function InputBar({
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="输入消息... (Shift+Enter 换行)"
+            placeholder={isLoading ? "等待回复中..." : "输入消息... (Shift+Enter 换行)"}
             className="w-full resize-none rounded-lg border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             rows={1}
-            disabled={disabled}
+            disabled={disabled || isLoading}
           />
         </div>
         {isLoading ? (

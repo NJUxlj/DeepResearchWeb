@@ -69,10 +69,8 @@ export function useChat() {
 
         cleanupRef.current = createChatStream(request, {
           onThinking: (thinkingChunk) => {
-            console.log("[Chat] Received thinking chunk:", thinkingChunk);
             currentThinking.push(thinkingChunk);
             updateLastMessageThinking(currentThinking.join(""));
-            console.log("[Chat] Updated thinking:", currentThinking.join(""));
           },
           onChunk: (chunk) => {
             currentContent.push(chunk);
@@ -82,7 +80,6 @@ export function useChat() {
             // TODO: 更新消息的引用信息
           },
           onDone: (_messageId) => {
-            console.log("[Chat] Stream done, messageId:", _messageId);
             setLoading(false);
           },
           onError: (errorMsg) => {
@@ -91,7 +88,6 @@ export function useChat() {
             setLoading(false);
           },
           onSessionId: (sessionId) => {
-            console.log("[Chat] Received new session ID:", sessionId);
             // 更新当前会话的 ID
             updateCurrentSessionId(sessionId);
           },
@@ -104,7 +100,6 @@ export function useChat() {
     },
     [
       currentSession,
-      messages,
       isLoading,
       setLoading,
       setError,
@@ -122,7 +117,6 @@ export function useChat() {
 
       try {
         const session = await sessionApi.get(sessionId);
-        console.log("[Chat] Loaded session messages:", session.messages);
         setCurrentSession(session);
         setMessages(session.messages);
       } catch (err) {

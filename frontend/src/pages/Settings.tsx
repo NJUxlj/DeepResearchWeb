@@ -158,8 +158,8 @@ export default function Settings() {
       await userSettingsApi.updateNotificationSettings({ [key]: value });
     } catch (error) {
       console.error("Failed to update notification settings:", error);
-      // 回滚
-      setNotificationSettings(notificationSettings);
+      // 回滚 - 使用函数式更新确保获取最新值
+      setNotificationSettings((prev) => prev);
       showError("设置更新失败");
     } finally {
       setNotificationSaving(false);
@@ -193,7 +193,8 @@ export default function Settings() {
   };
 
   const handleResetEnvConfig = () => {
-    if (confirm("确定要重置为默认值吗？当前的自定义配置将会丢失。")) {
+    // TODO: 后续应替换为自定义 Modal/Dialog 组件，以保持 UI 一致性
+    if (window.confirm("确定要重置为默认值吗？当前的自定义配置将会丢失。")) {
       loadEnvConfig();
     }
   };
@@ -415,7 +416,7 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.email_enabled}
                             onChange={(e) => handleNotificationChange("email_enabled", e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
                           />
                           <span className="text-sm">邮件通知</span>
                         </label>
@@ -424,7 +425,7 @@ export default function Settings() {
                             type="checkbox"
                             checked={notificationSettings.browser_enabled}
                             onChange={(e) => handleNotificationChange("browser_enabled", e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
                           />
                           <span className="text-sm">浏览器推送通知</span>
                         </label>
@@ -441,7 +442,7 @@ export default function Settings() {
                             checked={notificationSettings.notify_new_message}
                             onChange={(e) => handleNotificationChange("notify_new_message", e.target.checked)}
                             disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                            className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary disabled:opacity-50"
                           />
                           <span className="text-sm">新消息通知</span>
                         </label>
@@ -451,7 +452,7 @@ export default function Settings() {
                             checked={notificationSettings.notify_research_complete}
                             onChange={(e) => handleNotificationChange("notify_research_complete", e.target.checked)}
                             disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                            className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary disabled:opacity-50"
                           />
                           <span className="text-sm">研究任务完成通知</span>
                         </label>
@@ -461,7 +462,7 @@ export default function Settings() {
                             checked={notificationSettings.notify_mention}
                             onChange={(e) => handleNotificationChange("notify_mention", e.target.checked)}
                             disabled={!notificationSettings.email_enabled && !notificationSettings.browser_enabled}
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                            className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary disabled:opacity-50"
                           />
                           <span className="text-sm">被提及通知</span>
                         </label>

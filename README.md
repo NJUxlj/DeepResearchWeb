@@ -2,6 +2,46 @@
 
 基于 Web 的深度研究 Agent 系统，支持多阶段研究流水线、记忆系统和工具扩展。
 
+
+## 修复日志
+
+### 2026-04-15 前端代码审查修复
+
+**审查范围**: Chat 组件、Layout 组件、Pages & Stores、Config Pages & API
+
+#### Critical 问题 (4/4 已修复)
+- ✅ 删除 `useSSE.ts` 死代码
+- ✅ 修复 `useChat` 依赖数组错误（移除未使用的 messages）
+- ✅ 修复引用面板状态不同步（AppLayout 改用 store 的 isPanelOpen）
+- ✅ 修复 `tool.id !== 0` 硬编码判断（改为 `tool.tool_type !== "custom"`）
+
+#### Major 问题 (6/6 已修复)
+- ✅ 登录/注册页使用设计系统颜色 token
+- ✅ InputBar 在 isLoading 时禁用 textarea
+- ✅ 删除操作添加用户错误提示
+- ✅ 流式请求抽取 auth 逻辑（getAuthToken 函数）
+- ✅ Settings.confirm() 添加 TODO 注释
+- ✅ mutation 后使用乐观更新（setXxx(prev => ...)）
+
+#### Minor 问题 (11/13 已修复)
+- ✅ 引用面板添加 CSS transition 动画
+- ✅ 侧边栏和引用面板添加 max-lg:hidden 响应式
+- ✅ 会话列表路由变化时刷新
+- ✅ 模态框支持 ESC 关闭
+- ✅ 提交按钮添加 loading spinner
+- ✅ chatStore/authStore 添加说明注释
+- ✅ Settings 通知回滚使用函数式更新
+- ✅ 时间戳使用 UTC 时区
+- ✅ Chat 页面改为静态导入
+- ✅ availableTools 添加 TODO 注释
+- ✅ checkbox 使用 accent-primary
+- ⚠️ console.error 保留（合理错误日志）
+- ⚠️ 部分样式优化待后续完成
+
+**测试验证**: 8/8 Playwright E2E 测试全部通过
+
+---
+
 ## 系统架构
 
 ### 技术栈

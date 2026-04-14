@@ -105,7 +105,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         <div className="text-xs text-muted-foreground mt-1">
-          {new Date(message.created_at).toLocaleTimeString()}
+          {new Date(message.created_at).toLocaleTimeString("zh-CN", { timeZone: "UTC" })} UTC
         </div>
       </div>
     </div>

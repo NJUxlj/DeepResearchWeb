@@ -22,7 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className, onSessionSelect }) 
 
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [location.pathname]);
 
   const loadSessions = async () => {
     setLoading(true);

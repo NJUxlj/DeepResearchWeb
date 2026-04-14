@@ -91,7 +91,6 @@ function App() {
               setUser(user);
             } catch (e) {
               // token 无效，清除 auth 状态
-              console.log("Token invalid, clearing auth");
               setAuth({
                 access_token: '',
                 token_type: 'bearer',

@@ -59,12 +59,14 @@ export function MCPConfig() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("确定要删除这个 MCP 服务器吗？")) return;
+    // TODO: 后续应替换为自定义 Modal/Dialog 组件，以保持 UI 一致性
+    if (!window.confirm("确定要删除这个 MCP 服务器吗？")) return;
     try {
       await mcpApi.delete(id);
       setServers((prev) => prev.filter((server) => server.id !== id));
     } catch (err) {
       console.error("Failed to delete server:", err);
+      alert("删除 MCP 服务器失败，请重试");
     }
   };
 
@@ -72,9 +74,9 @@ export function MCPConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await mcpApi.create(data as Omit<MCPConfig, "id">);
+      const newServer = await mcpApi.create(data as Omit<MCPConfig, "id">);
+      setServers((prev) => [...prev, newServer]);
       setIsModalOpen(false);
-      loadServers();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "创建 MCP 服务器失败");
       console.error("Failed to create server:", err);
@@ -93,10 +95,12 @@ export function MCPConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await mcpApi.update(editingServer.id, data);
+      const updatedServer = await mcpApi.update(editingServer.id, data);
+      setServers((prev) =>
+        prev.map((server) => (server.id === editingServer.id ? updatedServer : server))
+      );
       setIsEditModalOpen(false);
       setEditingServer(null);
-      loadServers();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "更新 MCP 服务器失败");
       console.error("Failed to update server:", err);
@@ -245,6 +249,16 @@ interface MCPFormModalProps {
 }
 
 function MCPFormModal({ onClose, onSubmit, isSubmitting, error }: MCPFormModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -429,7 +443,7 @@ ANOTHER_KEY=value2"
               id="mcp-enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="mcp-enabled" className="text-sm font-medium">
               启用
@@ -447,8 +461,9 @@ ANOTHER_KEY=value2"
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "创建中..." : "创建"}
             </button>
           </div>
@@ -467,6 +482,16 @@ interface MCPEditModalProps {
 }
 
 function MCPEditModal({ server, onClose, onSubmit, isSubmitting, error }: MCPEditModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   // Convert env object to string format for editing
   const convertEnvToString = (env: Record<string, string> | undefined | null): string => {
     if (!env) return "";
@@ -659,7 +684,7 @@ ANOTHER_KEY=value2"
               id="edit-mcp-enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="edit-mcp-enabled" className="text-sm font-medium">
               启用
@@ -677,8 +702,9 @@ ANOTHER_KEY=value2"
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "保存中..." : "保存"}
             </button>
           </div>

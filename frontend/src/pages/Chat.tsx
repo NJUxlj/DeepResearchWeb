@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { useChatStore } from "@/stores/chatStore";
+import { sessionApi } from "@/api/session";
 import type { Session } from "@/types/session";
 
 export default function Chat() {
@@ -14,7 +15,6 @@ export default function Chat() {
 
     // 加载会话详情
     try {
-      const { sessionApi } = await import("@/api/session");
       const detail = await sessionApi.get(session.id);
       setMessages(detail.messages);
     } catch (error) {

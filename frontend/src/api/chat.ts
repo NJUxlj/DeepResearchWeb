@@ -2,6 +2,29 @@ import type { ChatRequest, ChatResponse, Citation } from "@/types/session";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
+/**
+ * 获取认证 token
+ * 优先从 zustand persist 存储中获取 (auth-storage)，兼容旧的直接存储方式
+ */
+export function getAuthToken(): string | null {
+  // 优先从 zustand persist 存储中获取 (auth-storage)
+  let token: string | null = null;
+  const authStorage = localStorage.getItem("auth-storage");
+  if (authStorage) {
+    try {
+      const parsed = JSON.parse(authStorage);
+      token = parsed?.state?.token;
+    } catch (e) {
+      console.error("Failed to parse auth-storage:", e);
+    }
+  }
+  // 兼容旧的直接存储方式
+  if (!token) {
+    token = localStorage.getItem("token");
+  }
+  return token;
+}
+
 export type StreamCallback = {
   onChunk?: (content: string) => void;
   onThinking?: (content: string) => void;
@@ -28,7 +51,7 @@ export function createChatStream(
   params.append("message", request.message);
   params.append("stream", "true");
 
-  const token = localStorage.getItem("token");
+  const token = getAuthToken();
   const url = `${API_BASE_URL}/chat/stream?${params.toString()}`;
 
   const controller = new AbortController();
@@ -163,7 +186,7 @@ export function createChatStream(
  * 发送消息（非流式）
  */
 export async function sendMessage(request: ChatRequest): Promise<ChatResponse> {
-  const token = localStorage.getItem("token");
+  const token = getAuthToken();
 
   const response = await fetch(`${API_BASE_URL}/chat/message`, {
     method: "POST",

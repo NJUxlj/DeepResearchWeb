@@ -39,12 +39,13 @@ export const useChatStore = create<ChatState>((set) => ({
         };
       }
       // 如果没有当前会话，创建一个基本的会话对象
+      // 注意: 这些是临时占位值，真正的会话数据将从后端获取后替换
       return {
         currentSession: {
           id: sessionId,
-          user_id: 0,
+          user_id: 0, // 占位值，会话创建后会由后端返回真实 user_id
           title: "New Chat",
-          mode: "chat",
+          mode: "chat", // 默认聊天模式
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           message_count: 0,

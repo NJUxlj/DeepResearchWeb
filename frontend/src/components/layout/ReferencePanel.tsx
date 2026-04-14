@@ -15,11 +15,11 @@ export const ReferencePanel: React.FC<ReferencePanelProps> = ({
 }) => {
   const { activeCitations, highlightedId, setHighlightedId } = useReferenceStore();
 
-  if (!isOpen) return null;
-
   return (
     <aside
-      className={`flex flex-col bg-background border-l ${className}`}
+      className={`flex flex-col bg-background border-l transition-all duration-300 ease-in-out transform ${
+        isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
+      } ${className}`}
     >
       {/* 头部 */}
       <div className="flex items-center justify-between p-4 border-b">

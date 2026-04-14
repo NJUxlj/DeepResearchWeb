@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Zap, Plus, Trash2, Power, PowerOff, X, Pencil } from "lucide-react";
+import { Zap, Plus, Trash2, Power, PowerOff, X, Pencil, Loader2 } from "lucide-react";
 import { skillsApi } from "@/api/skills";
 import type { SkillConfig } from "@/types/citation";
 
@@ -45,12 +45,14 @@ export function SkillsConfig() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("确定要删除这个 Skill 吗？")) return;
+    // TODO: 后续应替换为自定义 Modal/Dialog 组件，以保持 UI 一致性
+    if (!window.confirm("确定要删除这个 Skill 吗？")) return;
     try {
       await skillsApi.delete(id);
       setSkills((prev) => prev.filter((skill) => skill.id !== id));
     } catch (err) {
       console.error("Failed to delete skill:", err);
+      alert("删除 Skill 失败，请重试");
     }
   };
 
@@ -58,9 +60,9 @@ export function SkillsConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await skillsApi.create(data as Omit<SkillConfig, "id">);
+      const newSkill = await skillsApi.create(data as Omit<SkillConfig, "id">);
+      setSkills((prev) => [...prev, newSkill]);
       setIsModalOpen(false);
-      loadSkills();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "创建 Skill 失败");
       console.error("Failed to create skill:", err);
@@ -79,10 +81,12 @@ export function SkillsConfig() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await skillsApi.update(editingSkill.id, data);
+      const updatedSkill = await skillsApi.update(editingSkill.id, data);
+      setSkills((prev) =>
+        prev.map((skill) => (skill.id === editingSkill.id ? updatedSkill : skill))
+      );
       setIsEditModalOpen(false);
       setEditingSkill(null);
-      loadSkills();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.detail || "更新 Skill 失败");
       console.error("Failed to update skill:", err);
@@ -214,6 +218,16 @@ interface SkillFormModalProps {
 }
 
 function SkillFormModal({ onClose, onSubmit, isSubmitting, error }: SkillFormModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -224,6 +238,8 @@ function SkillFormModal({ onClose, onSubmit, isSubmitting, error }: SkillFormMod
   });
 
   // Available tools for selection
+  // TODO: 后端尚未提供 available_tools API，当前值参考后端 ToolType 枚举定义
+  // 来源: backend/app/tools/__init__.py 或相关 ToolType 定义
   const availableTools = ["web_search", "web_fetch", "memory_search", "mcp_tools", "code_executor"];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -353,7 +369,7 @@ function SkillFormModal({ onClose, onSubmit, isSubmitting, error }: SkillFormMod
               id="skill-enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="skill-enabled" className="text-sm font-medium">
               启用
@@ -371,8 +387,9 @@ function SkillFormModal({ onClose, onSubmit, isSubmitting, error }: SkillFormMod
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "创建中..." : "创建"}
             </button>
           </div>
@@ -391,6 +408,16 @@ interface SkillEditModalProps {
 }
 
 function SkillEditModal({ skill, onClose, onSubmit, isSubmitting, error }: SkillEditModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const [formData, setFormData] = useState({
     name: skill.name,
     description: skill.description || "",
@@ -401,6 +428,8 @@ function SkillEditModal({ skill, onClose, onSubmit, isSubmitting, error }: Skill
   });
 
   // Available tools for selection
+  // TODO: 后端尚未提供 available_tools API，当前值参考后端 ToolType 枚举定义
+  // 来源: backend/app/tools/__init__.py 或相关 ToolType 定义
   const availableTools = ["web_search", "web_fetch", "memory_search", "mcp_tools", "code_executor"];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -529,7 +558,7 @@ function SkillEditModal({ skill, onClose, onSubmit, isSubmitting, error }: Skill
               id="edit-skill-enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="w-4 h-4 rounded border-gray-300 accent-primary focus:ring-primary"
             />
             <label htmlFor="edit-skill-enabled" className="text-sm font-medium">
               启用
@@ -547,8 +576,9 @@ function SkillEditModal({ skill, onClose, onSubmit, isSubmitting, error }: Skill
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "保存中..." : "保存"}
             </button>
           </div>
